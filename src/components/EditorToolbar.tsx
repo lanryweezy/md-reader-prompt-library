@@ -1,34 +1,30 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Bold,
   Italic,
   Strikethrough,
   Heading1,
   Heading2,
-  Heading3,
   Link,
   Image as ImageIcon,
   Code,
   Table,
   CheckSquare,
   Quote,
-  Columns,
-  Edit3,
-  Eye,
-  Maximize2,
   Copy,
+  Check,
   Download,
   History,
+  Type,
+  Minus,
+  Plus,
 } from 'lucide-react';
 import { ViewMode, EditorSettings } from '../types';
 
 interface EditorToolbarProps {
   viewMode: ViewMode;
-  onChangeViewMode: (mode: ViewMode) => void;
   onFormat: (prefix: string, suffix?: string, defaultText?: string) => void;
   onInsertSnippet: (snippet: string) => void;
-  onOpenPromptFill: () => void;
-  hasVariables: boolean;
   onCopyRaw: () => void;
   onDownload: () => void;
   onOpenVersionHistory?: () => void;
@@ -40,7 +36,6 @@ interface EditorToolbarProps {
 
 export const EditorToolbar: React.FC<EditorToolbarProps> = ({
   viewMode,
-  onChangeViewMode,
   onFormat,
   onInsertSnippet,
   onCopyRaw,
@@ -51,242 +46,270 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
   settings,
   onUpdateSettings,
 }) => {
+  const [copied, setCopied] = useState(false);
+  const [isTypographyOpen, setIsTypographyOpen] = useState(false);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isTypographyOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+        setIsTypographyOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isTypographyOpen]);
+
+  // Hide formatting bar completely in Preview and Focus reading modes
+  if (viewMode === 'preview' || viewMode === 'focus') {
+    return null;
+  }
+
+  const handleCopy = () => {
+    onCopyRaw();
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  const iconBtnClass =
+    'p-1.5 rounded-md text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors cursor-pointer';
+
   return (
-    <div className="bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 px-3 py-1.5 flex flex-wrap items-center justify-between gap-2 select-none text-zinc-700 dark:text-zinc-300">
-      {/* Left: View Mode Toggle Tabs */}
-      <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-900 p-0.5 rounded-lg border border-zinc-200 dark:border-zinc-800 text-xs">
+    <div className="h-9 bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800/80 px-3 flex items-center justify-between gap-2 select-none shrink-0">
+      {/* Left: Quiet Formatting Actions */}
+      <div className="flex items-center gap-0.5 overflow-x-auto no-scrollbar">
         <button
-          onClick={() => onChangeViewMode('split')}
-          className={`px-2.5 py-1 rounded-md flex items-center gap-1.5 transition-all cursor-pointer ${
-            viewMode === 'split'
-              ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 font-bold shadow-xs'
-              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
-          }`}
-          title="Split View (Editor + Live Preview)"
+          onClick={() => onFormat('**', '**', 'bold text')}
+          className={iconBtnClass}
+          title="Bold"
+          aria-label="Bold"
         >
-          <Columns className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Split</span>
+          <Bold className="w-3.5 h-3.5" />
         </button>
 
         <button
-          onClick={() => onChangeViewMode('edit')}
-          className={`px-2.5 py-1 rounded-md flex items-center gap-1.5 transition-all cursor-pointer ${
-            viewMode === 'edit'
-              ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 font-bold shadow-xs'
-              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
-          }`}
-          title="Editor Only"
+          onClick={() => onFormat('*', '*', 'italic text')}
+          className={iconBtnClass}
+          title="Italic"
+          aria-label="Italic"
         >
-          <Edit3 className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Edit</span>
+          <Italic className="w-3.5 h-3.5" />
         </button>
 
         <button
-          onClick={() => onChangeViewMode('preview')}
-          className={`px-2.5 py-1 rounded-md flex items-center gap-1.5 transition-all cursor-pointer ${
-            viewMode === 'preview'
-              ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 font-bold shadow-xs'
-              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
-          }`}
-          title="Preview Only"
+          onClick={() => onFormat('~~', '~~', 'strikethrough')}
+          className={iconBtnClass}
+          title="Strikethrough"
+          aria-label="Strikethrough"
         >
-          <Eye className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Preview</span>
+          <Strikethrough className="w-3.5 h-3.5" />
+        </button>
+
+        <div className="w-px h-3.5 bg-zinc-200 dark:bg-zinc-800 mx-1.5" aria-hidden="true" />
+
+        <button
+          onClick={() => onFormat('# ', '', 'Heading 1')}
+          className={iconBtnClass}
+          title="Heading 1"
+          aria-label="Heading 1"
+        >
+          <Heading1 className="w-3.5 h-3.5" />
         </button>
 
         <button
-          onClick={() => onChangeViewMode('focus')}
-          className={`px-2.5 py-1 rounded-md flex items-center gap-1.5 transition-all cursor-pointer ${
-            viewMode === 'focus'
-              ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 font-bold shadow-xs'
-              : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
-          }`}
-          title="Reader Focus Mode"
+          onClick={() => onFormat('## ', '', 'Heading 2')}
+          className={iconBtnClass}
+          title="Heading 2"
+          aria-label="Heading 2"
         >
-          <Maximize2 className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Focus</span>
+          <Heading2 className="w-3.5 h-3.5" />
+        </button>
+
+        <div className="w-px h-3.5 bg-zinc-200 dark:bg-zinc-800 mx-1.5" aria-hidden="true" />
+
+        <button
+          onClick={() => onFormat('[', '](https://example.com)', 'Link')}
+          className={iconBtnClass}
+          title="Insert link"
+          aria-label="Insert link"
+        >
+          <Link className="w-3.5 h-3.5" />
+        </button>
+
+        <button
+          onClick={() => onOpenImageModal && onOpenImageModal()}
+          className={iconBtnClass}
+          title="Insert image"
+          aria-label="Insert image"
+        >
+          <ImageIcon className="w-3.5 h-3.5" />
+        </button>
+
+        <button
+          onClick={() => onFormat('```typescript\n', '\n```', '// code')}
+          className={iconBtnClass}
+          title="Code block"
+          aria-label="Code block"
+        >
+          <Code className="w-3.5 h-3.5" />
+        </button>
+
+        <button
+          onClick={() => {
+            if (onOpenTableModal) {
+              onOpenTableModal();
+            } else {
+              onInsertSnippet('\n| Header 1 | Header 2 |\n| :--- | :--- |\n| Value 1 | Value 2 |\n');
+            }
+          }}
+          className={iconBtnClass}
+          title="Insert table"
+          aria-label="Insert table"
+        >
+          <Table className="w-3.5 h-3.5" />
+        </button>
+
+        <button
+          onClick={() => onInsertSnippet('\n- [ ] Task item\n')}
+          className={iconBtnClass}
+          title="Checklist item"
+          aria-label="Checklist item"
+        >
+          <CheckSquare className="w-3.5 h-3.5" />
+        </button>
+
+        <button
+          onClick={() => onFormat('> ', '', 'Quote')}
+          className={iconBtnClass}
+          title="Blockquote"
+          aria-label="Blockquote"
+        >
+          <Quote className="w-3.5 h-3.5" />
+        </button>
+
+        <button
+          onClick={() => onFormat('{{', '}}', 'variable')}
+          className="px-1.5 py-1 rounded-md text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900 text-[11px] font-mono transition-colors cursor-pointer"
+          title="Insert prompt variable"
+        >
+          {`{{}}`}
         </button>
       </div>
 
-      {/* Center: Formatting Shortcut Tools (Active in Edit or Split mode) */}
-      {(viewMode === 'split' || viewMode === 'edit') && (
-        <div className="flex items-center gap-0.5 border-x border-zinc-200 dark:border-zinc-800 px-2 my-0.5 overflow-x-auto custom-scrollbar">
+      {/* Right: Typography Popover + Quiet Document Actions */}
+      <div className="flex items-center gap-0.5 shrink-0">
+        <div className="relative" ref={popoverRef}>
           <button
-            onClick={() => onFormat('**', '**', 'bold text')}
-            className="p-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer"
-            title="Bold (**text**)"
-          >
-            <Bold className="w-3.5 h-3.5" />
-          </button>
-
-          <button
-            onClick={() => onFormat('*', '*', 'italic text')}
-            className="p-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer"
-            title="Italic (*text*)"
-          >
-            <Italic className="w-3.5 h-3.5" />
-          </button>
-
-          <button
-            onClick={() => onFormat('~~', '~~', 'strikethrough')}
-            className="p-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer"
-            title="Strikethrough (~~text~~)"
-          >
-            <Strikethrough className="w-3.5 h-3.5" />
-          </button>
-
-          <div className="w-px h-4 bg-zinc-200 dark:bg-zinc-800 mx-1" />
-
-          <button
-            onClick={() => onFormat('# ', '', 'Heading 1')}
-            className="p-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer"
-            title="Heading 1"
-          >
-            <Heading1 className="w-3.5 h-3.5" />
-          </button>
-
-          <button
-            onClick={() => onFormat('## ', '', 'Heading 2')}
-            className="p-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer"
-            title="Heading 2"
-          >
-            <Heading2 className="w-3.5 h-3.5" />
-          </button>
-
-          <button
-            onClick={() => onFormat('### ', '', 'Heading 3')}
-            className="p-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer"
-            title="Heading 3"
-          >
-            <Heading3 className="w-3.5 h-3.5" />
-          </button>
-
-          <div className="w-px h-4 bg-zinc-200 dark:bg-zinc-800 mx-1" />
-
-          <button
-            onClick={() => onFormat('[', '](https://example.com)', 'Link Title')}
-            className="p-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer"
-            title="Insert Link"
-          >
-            <Link className="w-3.5 h-3.5" />
-          </button>
-
-          <button
-            onClick={() => onOpenImageModal && onOpenImageModal()}
-            className="p-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer flex items-center gap-1"
-            title="Insert Placeholder Image (Unsplash / Picsum API)"
-          >
-            <ImageIcon className="w-3.5 h-3.5 text-zinc-600 dark:text-zinc-300" />
-          </button>
-
-          <button
-            onClick={() => onFormat('```typescript\n', '\n```', '// Your code here')}
-            className="p-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer"
-            title="Code Block"
-          >
-            <Code className="w-3.5 h-3.5" />
-          </button>
-
-          <button
-            onClick={() => {
-              if (onOpenTableModal) {
-                onOpenTableModal();
-              } else {
-                onInsertSnippet(
-                  '\n| Header 1 | Header 2 |\n| :--- | :--- |\n| Value 1 | Value 2 |\n'
-                );
-              }
-            }}
-            className="p-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer"
-            title="Markdown Table Generator (Rows & Columns)"
-            aria-label="Open Markdown Table Generator dialog"
-          >
-            <Table className="w-3.5 h-3.5" />
-          </button>
-
-          <button
-            onClick={() => onInsertSnippet('\n- [ ] Task item\n')}
-            className="p-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer"
-            title="Task List Item"
-          >
-            <CheckSquare className="w-3.5 h-3.5" />
-          </button>
-
-          <button
-            onClick={() => onFormat('> ', '', 'Quote text')}
-            className="p-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer"
-            title="Blockquote"
-          >
-            <Quote className="w-3.5 h-3.5" />
-          </button>
-
-          {/* Prompt Variable Placeholder Insertion Button */}
-          <button
-            onClick={() => onFormat('{{', '}}', 'variable_name')}
-            className="px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-800 text-[11px] font-mono flex items-center gap-1 transition-colors cursor-pointer"
-            title="Insert Prompt Variable {{var}}"
-          >
-            <span>{`{{var}}`}</span>
-          </button>
-        </div>
-      )}
-
-      {/* Right: Copy Raw, Font options & Auto-scroll */}
-      <div className="flex items-center gap-2">
-        {/* Font Style selector */}
-        <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-900 p-0.5 rounded border border-zinc-200 dark:border-zinc-800 text-xs">
-          <button
-            onClick={() => onUpdateSettings({ fontStyle: 'sans' })}
-            className={`px-1.5 py-0.5 rounded text-[11px] font-sans cursor-pointer ${
-              settings.fontStyle === 'sans' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white font-semibold shadow-xs' : 'text-zinc-600 dark:text-zinc-400'
+            onClick={() => setIsTypographyOpen((open) => !open)}
+            className={`${iconBtnClass} ${
+              isTypographyOpen ? 'bg-zinc-100 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100' : ''
             }`}
+            title="Typography & editor preferences"
+            aria-label="Typography settings"
           >
-            Sans
+            <Type className="w-3.5 h-3.5" />
           </button>
-          <button
-            onClick={() => onUpdateSettings({ fontStyle: 'serif' })}
-            className={`px-1.5 py-0.5 rounded text-[11px] font-serif cursor-pointer ${
-              settings.fontStyle === 'serif' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white font-semibold shadow-xs' : 'text-zinc-600 dark:text-zinc-400'
-            }`}
-          >
-            Serif
-          </button>
-          <button
-            onClick={() => onUpdateSettings({ fontStyle: 'mono' })}
-            className={`px-1.5 py-0.5 rounded text-[11px] font-mono cursor-pointer ${
-              settings.fontStyle === 'mono' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white font-semibold shadow-xs' : 'text-zinc-600 dark:text-zinc-400'
-            }`}
-          >
-            Mono
-          </button>
+
+          {isTypographyOpen && (
+            <div className="absolute right-0 top-full mt-1.5 w-52 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-lg p-3 z-40 space-y-3 text-xs text-zinc-700 dark:text-zinc-300">
+              {/* Font family */}
+              <div className="space-y-1.5">
+                <span className="text-[11px] text-zinc-400 dark:text-zinc-500">Font</span>
+                <div className="grid grid-cols-3 gap-1 bg-zinc-100 dark:bg-zinc-950 p-0.5 rounded-md">
+                  {(['sans', 'serif', 'mono'] as const).map((style) => (
+                    <button
+                      key={style}
+                      onClick={() => onUpdateSettings({ fontStyle: style })}
+                      className={`py-1 rounded text-[11px] capitalize cursor-pointer transition-colors ${
+                        settings.fontStyle === style
+                          ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-medium shadow-2xs'
+                          : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
+                      }`}
+                    >
+                      {style}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Font size */}
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-zinc-400 dark:text-zinc-500">Size</span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => onUpdateSettings({ fontSize: Math.max(12, settings.fontSize - 1) })}
+                    className="p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                    aria-label="Decrease font size"
+                  >
+                    <Minus className="w-3 h-3" />
+                  </button>
+                  <span className="font-mono tabular-nums text-[11px] w-8 text-center text-zinc-900 dark:text-zinc-100">
+                    {settings.fontSize}px
+                  </span>
+                  <button
+                    onClick={() => onUpdateSettings({ fontSize: Math.min(24, settings.fontSize + 1) })}
+                    className="p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                    aria-label="Increase font size"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="border-t border-zinc-200 dark:border-zinc-800 pt-2 space-y-1.5">
+                <button
+                  onClick={() => onUpdateSettings({ lineNumbers: !settings.lineNumbers })}
+                  className="w-full flex items-center justify-between py-0.5 text-xs hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer"
+                >
+                  <span>Line numbers</span>
+                  <span className="font-mono text-[10px] text-zinc-400">
+                    {settings.lineNumbers ? 'ON' : 'OFF'}
+                  </span>
+                </button>
+                <button
+                  onClick={() => onUpdateSettings({ wordWrap: !settings.wordWrap })}
+                  className="w-full flex items-center justify-between py-0.5 text-xs hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer"
+                >
+                  <span>Word wrap</span>
+                  <span className="font-mono text-[10px] text-zinc-400">
+                    {settings.wordWrap ? 'ON' : 'OFF'}
+                  </span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Version History Modal Trigger */}
         {onOpenVersionHistory && (
           <button
             onClick={onOpenVersionHistory}
-            className="p-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer border border-zinc-200 dark:border-zinc-800 flex items-center gap-1 text-xs"
-            title="Document Revision History & Snapshots"
+            className={iconBtnClass}
+            title="Revision history"
+            aria-label="Revision history"
           >
             <History className="w-3.5 h-3.5" />
-            <span className="hidden xl:inline text-[11px] font-mono">History</span>
           </button>
         )}
 
-        {/* Copy Markdown Text */}
         <button
-          onClick={onCopyRaw}
-          className="p-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer border border-zinc-200 dark:border-zinc-800"
-          title="Copy Raw Markdown"
+          onClick={handleCopy}
+          className={iconBtnClass}
+          title={copied ? 'Copied markdown' : 'Copy markdown'}
+          aria-label="Copy markdown"
         >
-          <Copy className="w-3.5 h-3.5" />
+          {copied ? (
+            <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+          ) : (
+            <Copy className="w-3.5 h-3.5" />
+          )}
         </button>
 
-        {/* Download File */}
         <button
           onClick={onDownload}
-          className="p-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer border border-zinc-200 dark:border-zinc-800"
-          title="Download .md File"
+          className={iconBtnClass}
+          title="Download .md"
+          aria-label="Download markdown file"
         >
           <Download className="w-3.5 h-3.5" />
         </button>

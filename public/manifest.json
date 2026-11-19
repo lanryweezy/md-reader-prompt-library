@@ -1,0 +1,27 @@
+{
+  "name": "MD Reader — Markdown & Prompt Library",
+  "short_name": "MD Reader",
+  "description": "Local-first Markdown editor and reusable prompt library with live split preview.",
+  "start_url": "./?source=app",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#09090b",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "file_handlers": [
+    {
+      "action": "./?source=file-handler",
+      "accept": {
+        "text/markdown": [".md", ".markdown", ".mdx", ".mdown", ".mkd"],
+        "text/x-markdown": [".md", ".markdown"]
+      }
+    }
+  ]
+}

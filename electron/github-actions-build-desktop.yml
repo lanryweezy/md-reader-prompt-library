@@ -1,0 +1,84 @@
+# Copy this file to `.github/workflows/build-desktop.yml` directly in the GitHub web UI
+# (GitHub blocks pushing files into `.github/workflows/` unless the OAuth app has the `workflows` scope).
+# Once added on GitHub, every push to `main` (or `v*` tag) builds & publishes Windows .exe, macOS .dmg, and Linux .AppImage/.deb!
+
+name: Build & Publish Desktop Installers
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: win
+            command: npm run electron:build:win
+          - os: macos-latest
+            platform: mac
+            command: npm run electron:build:mac
+          - os: ubuntu-latest
+            platform: linux
+            command: npm run electron:build:linux
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install && npm install --no-save electron electron-builder
+
+      - name: Build web bundle and desktop installer
+        run: ${{ matrix.command }}
+
+      - name: Upload installer artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: md-reader-${{ matrix.platform }}
+          path: |
+            release/**/*.exe
+            release/**/*.dmg
+            release/**/*.zip
+            release/**/*.AppImage
+            release/**/*.deb
+
+  publish-release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all built installers
+        uses: actions/download-artifact@v4
+        with:
+          path: all-installers
+          merge-multiple: true
+
+      - name: Publish GitHub Release with .exe, .dmg, .AppImage & .deb
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'latest' }}
+          name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'Latest Desktop Build' }}
+          files: |
+            all-installers/**/*.exe
+            all-installers/**/*.dmg
+            all-installers/**/*.zip
+            all-installers/**/*.AppImage
+            all-installers/**/*.deb
+          generate_release_notes: true

@@ -24,7 +24,7 @@ interface PromptLibraryModalProps {
   files: MDFile[];
   onSelectPrompt: (fileId: string) => void;
   onOpenFillModalForFile: (fileId: string) => void;
-  onNewPromptTemplate: () => void;
+  onNewPromptTemplate: (title?: string, tags?: string[]) => void;
   onToggleFavorite: (fileId: string) => void;
 }
 
@@ -41,6 +41,9 @@ export const PromptLibraryModal: React.FC<PromptLibraryModalProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [isAddingPrompt, setIsAddingPrompt] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [newTags, setNewTags] = useState('');
 
   if (!isOpen) return null;
 
@@ -105,16 +108,63 @@ export const PromptLibraryModal: React.FC<PromptLibraryModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => {
-                onNewPromptTemplate();
-                onClose();
-              }}
-              className="px-3.5 py-2 rounded-xl bg-zinc-900 dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-950 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
-            >
-              <Plus className="w-4 h-4 stroke-[3]" />
-              <span>Create Custom Prompt</span>
-            </button>
+            {!isAddingPrompt ? (
+              <button
+                onClick={() => setIsAddingPrompt(true)}
+                className="px-3.5 py-2 rounded-xl bg-zinc-900 dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-950 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+              >
+                <Plus className="w-4 h-4 stroke-[3]" />
+                <span>Add Prompt</span>
+              </button>
+            ) : (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const trimmed = newTitle.trim();
+                  if (!trimmed) return;
+                  const parsedTags = newTags
+                    .split(',')
+                    .map((t) => t.trim().toLowerCase())
+                    .filter(Boolean);
+                  onNewPromptTemplate(trimmed, parsedTags);
+                  setNewTitle('');
+                  setNewTags('');
+                  setIsAddingPrompt(false);
+                  onClose();
+                }}
+                className="flex items-center gap-1.5"
+              >
+                <input
+                  type="text"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  placeholder="Prompt title..."
+                  autoFocus
+                  className="px-2.5 py-1.5 bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-zinc-900 dark:text-zinc-100 focus:outline-none w-44"
+                />
+                <input
+                  type="text"
+                  value={newTags}
+                  onChange={(e) => setNewTags(e.target.value)}
+                  placeholder="tags..."
+                  className="px-2.5 py-1.5 bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-700 rounded-lg text-xs text-zinc-900 dark:text-zinc-100 focus:outline-none w-28 hidden sm:block"
+                />
+                <button
+                  type="submit"
+                  disabled={!newTitle.trim()}
+                  className="px-3 py-1.5 rounded-lg bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 font-semibold text-xs disabled:opacity-40 cursor-pointer"
+                >
+                  Create
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsAddingPrompt(false)}
+                  className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </form>
+            )}
 
             <button
               onClick={onClose}
@@ -320,7 +370,8 @@ export const PromptLibraryModal: React.FC<PromptLibraryModalProps> = ({
                           </button>
                         ) : (
                           <button
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               onSelectPrompt(prompt.id);
                               onClose();
                             }}

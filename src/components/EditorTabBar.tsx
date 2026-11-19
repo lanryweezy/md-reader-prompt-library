@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, X, Plus, Sparkles } from 'lucide-react';
+import { X, Plus } from 'lucide-react';
 import { MDFile } from '../types';
 
 interface EditorTabBarProps {
@@ -28,35 +28,23 @@ export const EditorTabBar: React.FC<EditorTabBarProps> = ({
   if (openFiles.length === 0) return null;
 
   return (
-    <div className="flex items-center bg-zinc-100 dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 px-2 overflow-x-auto custom-scrollbar select-none text-xs gap-1 py-1">
-      <div className="flex items-center gap-1 flex-1 overflow-x-auto no-scrollbar">
+    <div className="flex items-center h-9 bg-zinc-50 dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800/80 px-2 select-none shrink-0">
+      <div className="flex items-center gap-0.5 flex-1 overflow-x-auto no-scrollbar h-full">
         {openFiles.map((file) => {
           const isActive = file.id === currentFileId;
-          const isPrompt = file.isPrompt || file.tags?.includes('prompt');
 
           return (
             <div
               key={file.id}
               onClick={() => onSelectFile(file.id)}
-              className={`group relative flex items-center gap-2 px-3 py-1.5 rounded-t-md transition-all cursor-pointer border-t-2 ${
+              className={`group relative flex items-center gap-2 px-3 h-7 rounded-md transition-colors cursor-pointer shrink-0 ${
                 isActive
-                  ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white border-zinc-900 dark:border-white font-medium shadow-xs'
-                  : 'bg-zinc-100 dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 border-transparent hover:bg-zinc-200 dark:hover:bg-zinc-900 hover:text-zinc-900 dark:hover:text-zinc-200'
+                  ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 font-medium shadow-2xs'
+                  : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-200/50 dark:hover:bg-zinc-900/50'
               }`}
             >
-              {isPrompt ? (
-                <Sparkles className="w-3.5 h-3.5 text-zinc-700 dark:text-zinc-200 shrink-0" />
-              ) : (
-                <FileText
-                  className={`w-3.5 h-3.5 shrink-0 ${
-                    isActive ? 'text-zinc-900 dark:text-zinc-100' : 'text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-400'
-                  }`}
-                />
-              )}
+              <span className="truncate max-w-[160px] text-xs">{file.name}</span>
 
-              <span className="truncate max-w-[140px] text-xs tracking-tight">{file.name}</span>
-
-              {/* Close Tab Button */}
               {openFiles.length > 1 && (
                 <button
                   type="button"
@@ -64,8 +52,11 @@ export const EditorTabBar: React.FC<EditorTabBarProps> = ({
                     e.stopPropagation();
                     onCloseTab(file.id);
                   }}
-                  className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-zinc-200 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-200 text-zinc-400 dark:text-zinc-500 transition-opacity cursor-pointer"
-                  title="Close Tab"
+                  className={`p-0.5 rounded hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-100 transition-opacity cursor-pointer ${
+                    isActive ? 'opacity-60 hover:opacity-100' : 'opacity-0 group-hover:opacity-100'
+                  }`}
+                  title="Close tab"
+                  aria-label={`Close ${file.name}`}
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -75,12 +66,12 @@ export const EditorTabBar: React.FC<EditorTabBarProps> = ({
         })}
       </div>
 
-      {/* New File Tab Button */}
       <button
         type="button"
         onClick={onNewFile}
-        className="p-1.5 rounded hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors shrink-0 cursor-pointer"
-        title="New File (Ctrl+N)"
+        className="p-1.5 rounded-md hover:bg-zinc-200/70 dark:hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors shrink-0 cursor-pointer ml-1"
+        title="New file (Ctrl+N)"
+        aria-label="Create new file"
       >
         <Plus className="w-3.5 h-3.5" />
       </button>

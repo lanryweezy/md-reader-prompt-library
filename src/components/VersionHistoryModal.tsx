@@ -13,15 +13,20 @@ import {
   Eye,
   ChevronRight,
   ArrowLeftRight,
+  Save,
 } from 'lucide-react';
-import { FileVersion, MDFile } from '../types';
+import { AutoSaveBackup, FileVersion, MDFile } from '../types';
 import { getDocumentStats, parseMarkdownToHTML } from '../utils/markdownParser';
+import { formatAutoSaveTime } from '../utils/autoSave';
+
+const AUTOSAVE_VIRTUAL_ID = '__autosave_backup__';
 
 interface VersionHistoryModalProps {
   isOpen: boolean;
   onClose: () => void;
   activeFile: MDFile;
   versions: FileVersion[];
+  autoSaveBackup?: AutoSaveBackup | null;
   onCreateSnapshot: (fileId: string, label?: string) => void;
   onRestoreVersion: (version: FileVersion) => void;
   onDeleteVersion: (versionId: string) => void;
@@ -32,6 +37,7 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
   onClose,
   activeFile,
   versions,
+  autoSaveBackup,
   onCreateSnapshot,
   onRestoreVersion,
   onDeleteVersion,
@@ -49,9 +55,26 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
     .filter((v) => v.fileId === activeFile.id)
     .sort((a, b) => b.timestamp - a.timestamp);
 
-  // Default select the latest version if none selected
+  // Convert the latest 30s localStorage auto-save backup into a comparable FileVersion
+  const autoSaveVirtualVersion: FileVersion | null = autoSaveBackup
+    ? {
+        id: AUTOSAVE_VIRTUAL_ID,
+        fileId: autoSaveBackup.fileId,
+        timestamp: autoSaveBackup.savedAt,
+        label: `Auto-Save Backup (${formatAutoSaveTime(autoSaveBackup.savedAt)})`,
+        content: autoSaveBackup.content,
+        wordCount: autoSaveBackup.wordCount,
+      }
+    : null;
+
+  // Default select the latest version or auto-save backup if none selected
   const activeSelectedVersion =
-    fileVersions.find((v) => v.id === selectedVersionId) || fileVersions[0] || null;
+    selectedVersionId === AUTOSAVE_VIRTUAL_ID && autoSaveVirtualVersion
+      ? autoSaveVirtualVersion
+      : fileVersions.find((v) => v.id === selectedVersionId) ||
+        autoSaveVirtualVersion ||
+        fileVersions[0] ||
+        null;
 
   const currentStats = getDocumentStats(activeFile.content);
 
@@ -192,6 +215,35 @@ export const VersionHistoryModal: React.FC<VersionHistoryModalProps> = ({
                 {currentStats.words} words • {currentStats.lines} lines
               </p>
             </div>
+
+            {/* Latest 30s Auto-Save Backup Card */}
+            {autoSaveVirtualVersion && (
+              <div
+                onClick={() => setSelectedVersionId(AUTOSAVE_VIRTUAL_ID)}
+                className={`p-3.5 border-b border-zinc-200 dark:border-zinc-800 flex flex-col gap-1.5 transition-all cursor-pointer border-l-2 ${
+                  activeSelectedVersion?.id === AUTOSAVE_VIRTUAL_ID
+                    ? 'bg-zinc-100 dark:bg-zinc-900 border-emerald-600 dark:border-emerald-400 text-zinc-900 dark:text-zinc-100 shadow-xs'
+                    : 'hover:bg-zinc-100/60 dark:hover:bg-zinc-900/60 border-transparent text-zinc-600 dark:text-zinc-400'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-semibold text-xs text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5 truncate">
+                    <Save className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span className="truncate">30s Auto-Save Backup</span>
+                  </span>
+                  <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 shrink-0">
+                    localStorage
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-[11px] font-mono text-zinc-500">
+                  <span>{formatAutoSaveTime(autoSaveVirtualVersion.timestamp)}</span>
+                  <span>
+                    {autoSaveVirtualVersion.wordCount} words
+                    {autoSaveVirtualVersion.content === activeFile.content ? ' (synced)' : ' (differs)'}
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* Version Items List */}
             {fileVersions.length === 0 ? (
